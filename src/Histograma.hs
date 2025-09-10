@@ -34,9 +34,10 @@ data Histograma = Histograma Float Float [Int]
 -- Require que @l < u@ y @n >= 1@.
 vacio :: Int -> (Float, Float) -> Histograma
 vacio n (l, u) = Histograma l ((u - l) / fromIntegral n) (replicate (n+2) 0)
+
 -- | Agrega un valor al histograma.
 agregar :: Float -> Histograma -> Histograma
-agregar x (Histograma l n xs) =
+agregar x (Histograma l n xs) = 
   Histograma l n (actualizarElem indice (+ 1) xs)
   where
     --ultPosicion=length(cs)-1 
