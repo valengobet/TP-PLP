@@ -33,17 +33,18 @@ data Histograma = Histograma Float Float [Int]
 -- valores en el rango y 2 casilleros adicionales para los valores fuera del rango.
 -- Require que @l < u@ y @n >= 1@.
 vacio :: Int -> (Float, Float) -> Histograma
-vacio n (l, u) = Histograma l ((u - l) / fromIntegral n) (replicate n 0)
-
+vacio n (l, u) = Histograma l ((u - l) / fromIntegral n) (replicate (n+2) 0)
 -- | Agrega un valor al histograma.
 agregar :: Float -> Histograma -> Histograma
 agregar x (Histograma l n xs) =
   Histograma l n (actualizarElem indice (+ 1) xs)
   where
+    --ultPosicion=length(cs)-1 
+    --finRango= i + t * fromIntegral (ultPosicion - 1) --porque el último casillero es +∞
     m = length xs
     indice
       | x < l = 0
-      | x >= l + fromIntegral (m - 2) * n = m - 1
+      | x >= l + fromIntegral (m - 2) * n = m - 1 -- |x >= finRango = ultPosicion  --esta justo en el final del rango o por encima
       | otherwise = 1 + floor ((x - l) / n)
 
 -- | Arma un histograma a partir de una lista de números reales con la cantidad de casilleros y rango indicados.
@@ -73,4 +74,10 @@ casPorcentaje (Casillero _ _ _ p) = p
 
 -- | Dado un histograma, devuelve la lista de casilleros con sus límites, cantidad y porcentaje.
 casilleros :: Histograma -> [Casillero]
-casilleros (Histograma l n xs) = error "COMPLETAR EJERCICIO 6"
+casilleros (Histograma i t cs) = zipWith4 (\pos c r p -> Casillero r (listRangos !! (pos+1)) c p) listPosiciones cs listRangos listPorcentaje
+                                          where
+                                            listPosiciones = [0..length cs - 2] 
+                                            listRangos     = [infinitoNegativo]++[i,i+t..i+t*fromIntegral(length cs - 2)]++[infinitoPositivo]
+                                            listPorcentaje = map (porcentaje (sum cs)) cs
+porcentaje :: Int -> Int -> Float
+porcentaje cantNumeros totalCasillero = fromIntegral (totalCasillero*100)/ fromIntegral (cantNumeros)
