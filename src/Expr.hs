@@ -22,26 +22,65 @@ data Expr
   | Div Expr Expr
   deriving (Show, Eq)
 
--- recrExpr :: ... anotar el tipo ...
-recrExpr = error "COMPLETAR EJERCICIO 7"
+recrExpr ::    (Float -> a) 
+            -> (Float-> Float -> a) 
+            -> (Expr -> a -> Expr -> a -> a) 
+            -> (Expr -> a -> Expr -> a -> a) 
+            -> (Expr -> a -> Expr -> a -> a) 
+            -> (Expr -> a -> Expr -> a -> a) 
+            -> Expr -> a
+recrExpr fConst fRango fSuma fResta fMult fDiv expresion = 
+          case expresion of
+              Const x -> fConst x
+              Rango a b-> fRango a b
+              Suma e1 e2 -> fSuma e1 (rec e1) e2  (rec e2)
+              Resta e1 e2 -> fResta e1 (rec e1) e2 (rec e2)
+              Mult e1 e2 -> fMult e1 (rec e1) (rec e2)
+              Div e1 e2 -> fDiv e1 (rec e1) e2 (rec e2)
+          where rec = recrExpr fConst fRango fSuma fResta fMult fDiv
 
--- foldExpr :: ... anotar el tipo ...
-foldExpr = error "COMPLETAR EJERCICIO 7"
+
+foldExpr :: (Float -> a) -> (Float-> Float -> a) -> (a -> a -> a) -> (a -> a -> a) -> (a -> a -> a) -> (a -> a -> a) -> Expr -> a
+foldExpr fConst fRango fSuma fResta fMult fDiv expresion = 
+  case expresion of
+    Const x -> fConst x
+    Rango a b-> fRango a b
+    Suma e1 e2 -> fSuma (rec e1) (rec e2)
+    Resta e1 e2 -> fResta (rec e1) (rec e2)
+    Mult e1 e2 -> fMult (rec e1) (rec e2)
+    Div e1 e2 -> fDiv (rec e1) (rec e2)
+  where rec = foldExpr fConst fRango fSuma fResta fMult fDiv
 
 -- | Evaluar expresiones dado un generador de números aleatorios
 eval :: Expr -> G Float
-eval = error "COMPLETAR EJERCICIO 8"
+eval = foldExpr (\const -> \g -> (const,g))
+                (\a b -> \g -> dameUno (a,b) g)
+                (recI recD -> \g -> let (v1,g1) = recI g  -- (v,g1) es el res de evaluar la expr izq de la suma, 
+                                        (v2,g2) = recD g1 -- (v1,g2) es el res de evaluar la expr der de la suma
+                                        in (v1+v2,g2))  -- sumo cada res valor de cada lado con g2 por que debo tomar el nuevo generador
+                (recI recD -> \g -> let (v1,g1) = recI g
+                                        (v2,g2) =recD g1
+                                        in (v1-v2, g2))  
+                (recI recD -> \g -> let (v1,g1) = recI g
+                                        (v2,g2) = recD g1
+                                        in (v1*v2, g2))  
+                (recI recD -> \g -> let (v1,g1) = recI g
+                                        (v2,g2) = recD g1
+                                        in (v1/v2,g2))  
 
 -- | @armarHistograma m n f g@ arma un histograma con @m@ casilleros
 -- a partir del resultado de tomar @n@ muestras de @f@ usando el generador @g@.
 armarHistograma :: Int -> Int -> G Float -> G Histograma
-armarHistograma m n f g = error "COMPLETAR EJERCICIO 9"
+armarHistograma m n f g = let (listaValores,gen)= muestra f n g 
+                          in ( histograma(m,rango95 listaValores,listaValores) , gen)
 
 -- | @evalHistograma m n e g@ evalúa la expresión @e@ usando el generador @g@ @n@ veces
 -- devuelve un histograma con @m@ casilleros y rango calculado con @rango95@ para abarcar el 95% de confianza de los valores.
 -- @n@ debe ser mayor que 0.
 evalHistograma :: Int -> Int -> Expr -> G Histograma
-evalHistograma m n expr = error "COMPLETAR EJERCICIO 10"
+evalHistograma m n expr = armarHistograma m n (eval expr) --si pusiera \g -> armarHistograma m n (eval expr g) g 
+                                                          --no coincidiria con el tipo de armarHistrograma 
+                                                          --ya que (eval expr g)::(Float,gen) pero espera algo de G Float
 
 -- Podemos armar histogramas que muestren las n evaluaciones en m casilleros.
 -- >>> evalHistograma 11 10 (Suma (Rango 1 5) (Rango 100 105)) (genNormalConSemilla 0)
