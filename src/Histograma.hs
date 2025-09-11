@@ -23,8 +23,9 @@ module Histograma
   )
 where
 
+import Data.List (zipWith4)
 import GHC.Arr (accum)
-import Util (actualizarElem)
+import Util (actualizarElem, infinitoNegativo, infinitoPositivo)
 
 data Histograma = Histograma Float Float [Int]
   deriving (Show, Eq)
@@ -33,7 +34,7 @@ data Histograma = Histograma Float Float [Int]
 -- valores en el rango y 2 casilleros adicionales para los valores fuera del rango.
 -- Require que @l < u@ y @n >= 1@.
 vacio :: Int -> (Float, Float) -> Histograma
-vacio n (l, u) = Histograma l ((u - l) / fromIntegral n) (replicate n 0)
+vacio n (l, u) = Histograma l ((u - l) / fromIntegral n) (replicate (n + 2) 0)
 
 -- | Agrega un valor al histograma.
 agregar :: Float -> Histograma -> Histograma
@@ -73,4 +74,31 @@ casPorcentaje (Casillero _ _ _ p) = p
 
 -- | Dado un histograma, devuelve la lista de casilleros con sus límites, cantidad y porcentaje.
 casilleros :: Histograma -> [Casillero]
-casilleros (Histograma l n xs) = error "COMPLETAR EJERCICIO 6"
+casilleros (Histograma l n xs) = zipWith4 (\a b c p -> Casillero a b c p) (limitesInferiores l n xs) (limitesSuperiores l n xs) xs (porcentajes (foldr (+) 0 xs) xs)
+
+limitesSuperiores :: Float -> Float -> [Int] -> [Float]
+limitesSuperiores l n xs =
+  zipWith
+    ( \x i ->
+        if i == (length xs - 1)
+          then infinitoPositivo
+          else l + n * fromIntegral i
+    )
+    xs
+    [0 .. length xs - 1]
+
+limitesInferiores :: Float -> Float -> [Int] -> [Float]
+limitesInferiores l n xs =
+  zipWith
+    ( \x i ->
+        if i == 0
+          then infinitoNegativo
+          else l + (n * fromIntegral (i - 1))
+    )
+    xs
+    [0 .. length xs - 1]
+
+porcentajes :: Int -> [Int] -> [Float]
+porcentajes 0 xs = replicate (length xs) 0.0
+porcentajes _ [] = []
+porcentajes total (x : xs) = (fromIntegral (x * 100) / fromIntegral total) : porcentajes total xs
