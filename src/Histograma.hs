@@ -23,8 +23,9 @@ module Histograma
   )
 where
 
-import GHC.Arr (accum)
-import Util (actualizarElem)
+import GHC.Arr 
+import Util 
+import Data.List 
 
 data Histograma = Histograma Float Float [Int]
   deriving (Show, Eq)
@@ -74,11 +75,13 @@ casPorcentaje :: Casillero -> Float
 casPorcentaje (Casillero _ _ _ p) = p
 
 -- | Dado un histograma, devuelve la lista de casilleros con sus límites, cantidad y porcentaje.
-casilleros :: Histograma -> [Casillero]
-casilleros (Histograma i t cs) = zipWith4 (\pos c r p -> Casillero r (listRangos !! (pos+1)) c p) listPosiciones cs listRangos listPorcentaje
+ccasilleros :: Histograma -> [Casillero]
+casilleros (Histograma i t cs) = zipWith4 (\r idx c p-> Casillero r (listRangos!!(idx+1)) c p) listRangos listPosiciones cs listPorcentaje
                                           where
-                                            listPosiciones = [0..length cs - 2] 
                                             listRangos     = [infinitoNegativo]++[i,i+t..i+t*fromIntegral(length cs - 2)]++[infinitoPositivo]
+                                            listPosiciones = [0..length listRangos - 2] 
                                             listPorcentaje = map (porcentaje (sum cs)) cs
+                                            
 porcentaje :: Int -> Int -> Float
-porcentaje cantNumeros totalCasillero = fromIntegral (totalCasillero*100)/ fromIntegral (cantNumeros)
+porcentaje 0 _ = 0.0
+porcentaje cantNumeros totalCasillero = fromIntegral (totalCasillero*100)/ fromIntegral cantNumeros
