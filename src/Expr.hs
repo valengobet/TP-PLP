@@ -29,22 +29,22 @@ recrExpr ::    (Float -> a)
             -> (Expr -> a -> Expr -> a -> a) 
             -> (Expr -> a -> Expr -> a -> a) 
             -> Expr -> a
-recrExpr fConst fRango fSuma fResta fMult fDiv expresion = 
-          case expresion of
-              Const x -> fConst x
-              Rango a b-> fRango a b
+recrExpr fConst fRango fSuma fResta fMult fDiv expresion =
+  case expresion of
+    Const x -> fConst x
+              Rango a b -> fRango a b
               Suma e1 e2 -> fSuma e1 (rec e1) e2  (rec e2)
-              Resta e1 e2 -> fResta e1 (rec e1) e2 (rec e2)
-              Mult e1 e2 -> fMult e1 (rec e1) (rec e2)
-              Div e1 e2 -> fDiv e1 (rec e1) e2 (rec e2)
+    Resta e1 e2 -> fResta e1 (rec e1) e2 (rec e2)
+    Mult e1 e2 -> fMult e1 (rec e1) e2 (rec e2)
+    Div e1 e2 -> fDiv e1 (rec e1) e2 (rec e2)
           where rec = recrExpr fConst fRango fSuma fResta fMult fDiv
 
 
 foldExpr :: (Float -> a) -> (Float-> Float -> a) -> (a -> a -> a) -> (a -> a -> a) -> (a -> a -> a) -> (a -> a -> a) -> Expr -> a
-foldExpr fConst fRango fSuma fResta fMult fDiv expresion = 
+foldExpr fConst fRango fSuma fResta fMult fDiv expresion =
   case expresion of
     Const x -> fConst x
-    Rango a b-> fRango a b
+    Rango a b -> fRango a b
     Suma e1 e2 -> fSuma (rec e1) (rec e2)
     Resta e1 e2 -> fResta (rec e1) (rec e2)
     Mult e1 e2 -> fMult (rec e1) (rec e2)
@@ -71,8 +71,9 @@ eval = foldExpr (\const -> \g -> (const,g))
 -- | @armarHistograma m n f g@ arma un histograma con @m@ casilleros
 -- a partir del resultado de tomar @n@ muestras de @f@ usando el generador @g@.
 armarHistograma :: Int -> Int -> G Float -> G Histograma
-armarHistograma m n f g = let (listaValores,gen)= muestra f n g 
-                          in ( histograma(m,rango95 listaValores,listaValores) , gen)
+armarHistograma m n f g =
+  let (listaValores, gen) = muestra f n g
+   in (histograma m (rango95 listaValores) listaValores, gen)
 
 -- | @evalHistograma m n e g@ evalúa la expresión @e@ usando el generador @g@ @n@ veces
 -- devuelve un histograma con @m@ casilleros y rango calculado con @rango95@ para abarcar el 95% de confianza de los valores.
@@ -92,7 +93,31 @@ evalHistograma m n expr = armarHistograma m n (eval expr) --si pusiera \g -> arm
 -- | Mostrar las expresiones, pero evitando algunos paréntesis innecesarios.
 -- En particular queremos evitar paréntesis en sumas y productos anidados.
 mostrar :: Expr -> String
-mostrar = error "COMPLETAR EJERCICIO 11"
+mostrar =
+  recrExpr
+    (\x -> show x)
+    (\a b -> show a ++ "~" ++ show b)
+    ( \e1 rec1 e2 rec2 -> case constructor e2 of
+        CEConst -> maybeParen (not (constructor e1 == CEConst || constructor e1 == CESuma)) rec1 ++ " + " ++ rec2
+        _ -> rec1 ++ " + " ++ rec2
+    )
+    ( \e1 rec1 e2 rec2 ->
+        case constructor e1 of
+          CEResta ->
+            case constructor e2 of
+              CEResta -> "(" ++ rec1 ++ ") - (" ++ rec2 ++ ")"
+              _ -> "(" ++ rec1 ++ ") - " ++ rec2
+          _ ->
+            case constructor e2 of
+              CEResta -> rec1 ++ " - (" ++ rec2 ++ ")"
+              _ -> rec1 ++ " - " ++ rec2
+    )
+    ( \e1 rec1 e2 rec2 -> case constructor e2 of
+        CEConst -> maybeParen (not (constructor e1 == CEConst || constructor e1 == CEMult)) rec1 ++ " * " ++ rec2
+        CERango -> "(" ++ rec1 ++ " * " ++ rec2 ++ ")"
+        _ -> rec1 ++ " * " ++ rec2
+    )
+    (\e1 rec1 e2 rec2 -> maybeParen True rec1 ++ " / " ++ rec2)
 
 data ConstructorExpr = CEConst | CERango | CESuma | CEResta | CEMult | CEDiv
   deriving (Show, Eq)
