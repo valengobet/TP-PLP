@@ -66,24 +66,24 @@ foldExpr fConst fRango fSuma fResta fMult fDiv expresion =
 eval :: Expr -> G Float
 eval =
   foldExpr
-    (\const -> \g -> (const, g))
-    (\a b -> \g -> dameUno (a, b) g)
-    ( \recI recD -> \g ->
-        let (v1, g1) = recI g -- (v,g1) es el res de evaluar la expr izq de la suma,
-            (v2, g2) = recD g1 -- (v1,g2) es el res de evaluar la expr der de la suma
-         in (v1 + v2, g2) -- sumo cada res valor de cada lado con g2 por que debo tomar el nuevo generador
+    (\const -> \g -> (const, g)) -- Evaluar constantes
+    (\a b -> \g -> dameUno (a, b) g) -- Evaluar nodos aleatorios
+    ( \recI recD -> \g ->              -- Suma
+        let (v1, g1) = recI g 
+            (v2, g2) = recD g1 
+         in (v1 + v2, g2) 
     )
-    ( \recI recD -> \g ->
+    ( \recI recD -> \g ->              -- Resta
         let (v1, g1) = recI g
             (v2, g2) = recD g1
          in (v1 - v2, g2)
     )
-    ( \recI recD -> \g ->
+    ( \recI recD -> \g ->              -- Multiplicación
         let (v1, g1) = recI g
             (v2, g2) = recD g1
          in (v1 * v2, g2)
     )
-    ( \recI recD -> \g ->
+    ( \recI recD -> \g ->              -- División
         let (v1, g1) = recI g
             (v2, g2) = recD g1
          in (v1 / v2, g2)
