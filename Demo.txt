@@ -1,0 +1,87 @@
+data Nat = Z | S Nat
+
+suma :: Nat → Nat → Nat
+suma Z m = m                    -- {S1}
+suma ( S n ) m = S ( suma n m ) -- {S2}
+
+cantLit :: Expr → Nat
+cantLit ( Const _ )   = S Z                                  -- {L1}
+cantLit ( Rango _ _ ) = S Z                                  -- {L2}
+cantLit ( Suma a b )  = suma ( cantLit a ) ( cantLit b )     -- {L3}
+cantLit ( Resta a b ) = suma ( cantLit a ) ( cantLit b )     -- {L4}
+cantLit ( Mult a b )  = suma ( cantLit a ) ( cantLit b)      -- {L5}
+cantLit ( Div a b )   = suma ( cantLit a ) ( cantLit b )     -- {L6}
+
+cantOp :: Expr → Nat
+cantOp ( Const _ )   = Z                                     -- {O1}
+cantOp ( Rango _ _ ) = Z                                     -- {O2}
+cantOp ( Suma a b )  = S ( suma ( cantOp a ) ( cantOp b ))   -- {O3}
+cantOp ( Resta a b ) = S ( suma ( cantOp a ) ( cantOp b ))   -- {O4}
+cantOp ( Mult a b )  = S ( suma ( cantOp a ) ( cantOp b ))   -- {O5}
+cantOp ( Div a b )   = S ( suma ( cantOp a ) ( cantOp b ))   -- {O6}
+
+
+Queremos demostrar que: ∀e :: Expr · cantLit e = S (cantOp e)
+
+Recordar que la estructura de Expr es:
+data Expr 
+  = Const Float
+  | Rango Float Float
+  | Suma Expr Expr
+  | Resta Expr Expr
+  | Mult Expr Expr
+  | Div Expr Expr
+
+a) El predicado unario P(e) es: P(e) ≡ cantLit e = S (cantOp e)
+
+b) Casos base:       ∀ x :: Float .    P(Const x)
+                     ∀ a,b :: Float .  P(Rango a b)
+
+   Casos inductivos: ∀ e1,e2 :: Expr . (P(e1) ∧ P(e2)) => P(Suma e1 e2)
+                     ∀ e1,e2 :: Expr . (P(e1) ∧ P(e2)) => P(Resta e1 e2)
+                     ∀ e1,e2 :: Expr . (P(e1) ∧ P(e2)) => P(Mult e1 e2)
+                     ∀ e1,e2 :: Expr . (P(e1) ∧ P(e2)) => P(Div e1 e2)
+
+c) {CONMUT} ∀n, m :: Nat · suma n m = suma m n
+
+Demostración por inducción
+
+Casos base:
+
+1. ∀ x :: Float . P(Const x)
+P(Const x) ≡ 
+cantLit (Const x) = S (cantOp (Const x))
+              S Z = S (cantOp (Const x))               -- {L1}
+              S Z = S Z                                -- {O1}
+Ambas partes son iguales.
+
+2. ∀ a,b :: Float . P(Rango a b)
+P(Rango a b) ≡ 
+cantLit (Rango a b) = S (cantOp (Rango a b))
+                S Z = S (cantOp (Rango a b))                 -- {L2}
+                S Z = S Z                                    -- {O2}
+Se cumplen los casos base.
+
+
+Caso inductivo: Suma
+∀ e1,e2 :: Expr . (P(e1) ∧ P(e2)) => P(Suma e1 e2)
+
+Hipótesis Inductiva:
+{HI1} P(e1) ≡ cantLit e1 = S (cantOp e1)
+{HI2} P(e2) ≡ cantLit e2 = S (cantOp e2)
+
+Paso Inductivo: 
+Quiero ver que P(Suma e1 e2) ≡ cantLit (Suma e1 e2) = S (cantOp (Suma e1 e2))
+cantLit (Suma e1 e2) = 
+                     = suma (cantLit e1) (cantLit e2)         -- {L3}
+                     = suma (S (cantOp e1)) (cantLit e2)      -- {HI1}
+                     = S (suma (cantOp e1) (cantLit e2))      -- {S2}
+                     = S (suma (cantLit e2) (cantOp e1))      -- {CONMUT}
+                     = S (suma (S (cantOp e2)) (cantOp e1))   -- {HI2}
+                     = S (S (suma (cantOp e2) (cantOp e1)))   -- {S2}
+                     = S (S (suma (cantOp e1) (cantOp e2)))   -- {CONMUT}
+                     = S (cantOp (Suma e1 e2))                -- {O3}
+
+Ambos lados son iguales por lo tanto P(Suma e1 e2) es verdadero.
+El resto de los casos inductivos se hacen de forma analoga.
+Como se cumplen los casos bases e inductivos queda demostrado P(e) ∀e :: Expr · cantLit e = S (cantOp e)
