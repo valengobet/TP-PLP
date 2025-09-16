@@ -42,7 +42,15 @@ recrExpr fConst fRango fSuma fResta fMult fDiv expresion =
   where
     rec = recrExpr fConst fRango fSuma fResta fMult fDiv
 
-foldExpr :: (Float -> a) -> (Float -> Float -> a) -> (a -> a -> a) -> (a -> a -> a) -> (a -> a -> a) -> (a -> a -> a) -> Expr -> a
+foldExpr ::
+  (Float -> a) ->
+  (Float -> Float -> a) -> 
+  (a -> a -> a) ->
+  (a -> a -> a) -> 
+  (a -> a -> a) ->
+  (a -> a -> a) -> 
+  Expr -> 
+  a
 foldExpr fConst fRango fSuma fResta fMult fDiv expresion =
   case expresion of
     Const x -> fConst x

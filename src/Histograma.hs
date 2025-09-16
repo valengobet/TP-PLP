@@ -41,13 +41,11 @@ agregar :: Float -> Histograma -> Histograma
 agregar x (Histograma l n xs) =
   Histograma l n (actualizarElem indice (+ 1) xs)
   where
-    -- ultPosicion=length(cs)-1
-    -- finRango= i + t * fromIntegral (ultPosicion - 1) --porque el último casillero es +∞
     m = length xs
+    finDelRango= l + fromIntegral (m - 2) * n 
     indice
-      | x < l = 0
-      | x >= l + fromIntegral (m - 2) * n = m - 1
-      -- \|x >= finRango = ultPosicion  --esta justo en el final del rango o por encima
+      | x < l = 0  --esta por debajo del rango
+      | x >= finDelRango = m - 1 --esta justo en el final del rango o por encima
       | otherwise = 1 + floor ((x - l) / n)
 
 -- | Arma un histograma a partir de una lista de números reales con la cantidad de casilleros y rango indicados.

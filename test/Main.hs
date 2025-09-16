@@ -23,7 +23,7 @@ allTests =
       -- "Ej 2 - Util.actualizarElem" ~: testsActualizarElem,
       -- "Ej 3 - Histograma.vacio" ~: testsVacio,
       -- "Ej 4 - Histograma.agregar" ~: testsAgregar,
-      "Ej 5 - Histograma.histograma" ~: testsHistograma
+      -- "Ej 5 - Histograma.histograma" ~: testsHistograma
       -- "Ej 6 - Histograma.casilleros" ~: testsCasilleros,
       -- "Ej 7 - Expr.recrExpr" ~: testsRecr,
       -- "Ej 7 - Expr.foldExpr" ~: testsFold,
@@ -41,7 +41,9 @@ testsAlinearDerecha =
   test
     [ alinearDerecha 6 "hola" ~?= "  hola",
       alinearDerecha 10 "incierticalc" ~?= "incierticalc",
-      completar
+      alinearDerecha 8 "Haskell" ~?= " Haskell", -- un espacio
+      alinearDerecha 5 "AB" ~?= "   AB",         -- varios espacios
+      alinearDerecha 3 "" ~?= "   ",             -- string vacío pero largo
     ]
 
 testsActualizarElem :: Test
@@ -49,7 +51,9 @@ testsActualizarElem =
   test
     [ actualizarElem 0 (+ 10) [1, 2, 3] ~?= [11, 2, 3],
       actualizarElem 1 (+ 10) [1, 2, 3] ~?= [1, 12, 3],
-      completar
+      actualizarElem 0 (const 99) [7, 8, 9] ~?= [99,8,9], -- reemplazo directo
+      actualizarElem 1 (subtract 5) [10, 20, 30] ~?= [10,15,30], 
+      actualizarElem 4 (*10) [1..4] ~?= [1,2,3,4],       -- índice fuera
     ]
 
 testsVacio :: Test
@@ -67,54 +71,119 @@ testsVacio =
               Casillero 4 6 0 0,
               Casillero 6 infinitoPositivo 0 0
             ],
-      completar
+      -- Caso con 2 casilleros en un rango más grande
+      casilleros (vacio 2 (0, 20))
+        ~?= [ Casillero infinitoNegativo 0 0 0,
+              Casillero 0 10 0 0,
+              Casillero 10 20 0 0,
+              Casillero 20 infinitoPositivo 0 0
+            ],
+
+      -- Caso con 4 casilleros en rango negativo
+      casilleros (vacio 4 (-8, 0))
+        ~?= [ Casillero infinitoNegativo (-8) 0 0,
+              Casillero (-8) (-6) 0 0,
+              Casillero (-6) (-4) 0 0,
+              Casillero (-4) (-2) 0 0,
+              Casillero (-2) 0 0 0,
+              Casillero 0 infinitoPositivo 0 0
+            ],
+
+      -- Caso con rango que no empieza en 0
+      casilleros (vacio 2 (5, 9))
+        ~?= [ Casillero infinitoNegativo 5 0 0,
+              Casillero 5 7 0 0,
+              Casillero 7 9 0 0,
+              Casillero 9 infinitoPositivo 0 0
+            ],
+
     ]
 
 testsAgregar :: Test
 testsAgregar =
-  let h0 = vacio 3 (0, 6)
+  let h0 = vacio 3 (0, 6) -- casilleros: (-∞,0), [0,2), [2,4), [4,6), [6,+∞)
    in test
-        [ casilleros (agregar 0 h0)
+        [ -- Valor en el límite inferior del rango: cae en [0,2)
+          casilleros (agregar 0 h0)
             ~?= [ Casillero infinitoNegativo 0 0 0,
-                  Casillero 0 2 1 100, -- El 100% de los valores están acá
+                  Casillero 0 2 1 100,
                   Casillero 2 4 0 0,
                   Casillero 4 6 0 0,
                   Casillero 6 infinitoPositivo 0 0
                 ],
+
+          -- Valor en el segundo casillero finito [2,4)
           casilleros (agregar 2 h0)
             ~?= [ Casillero infinitoNegativo 0 0 0,
                   Casillero 0 2 0 0,
-                  Casillero 2 4 1 100, -- El 100% de los valores están acá
+                  Casillero 2 4 1 100,
                   Casillero 4 6 0 0,
                   Casillero 6 infinitoPositivo 0 0
                 ],
+
+          -- Valor menor al rango: cae en -∞
           casilleros (agregar (-1) h0)
-            ~?= [ Casillero infinitoNegativo 0 1 100, -- El 100% de los valores están acá
+            ~?= [ Casillero infinitoNegativo 0 1 100,
                   Casillero 0 2 0 0,
                   Casillero 2 4 0 0,
                   Casillero 4 6 0 0,
                   Casillero 6 infinitoPositivo 0 0
                 ],
-          completar
+
+          -- Valor dentro del último casillero finito [4,6)
+          casilleros (agregar 5.5 h0)
+            ~?= [ Casillero infinitoNegativo 0 0 0,
+                  Casillero 0 2 0 0,
+                  Casillero 2 4 0 0,
+                  Casillero 4 6 1 100,
+                  Casillero 6 infinitoPositivo 0 0
+                ],
+
+          -- Valor mayor al rango: cae en +∞
+          casilleros (agregar 10 h0)
+            ~?= [ Casillero infinitoNegativo 0 0 0,
+                  Casillero 0 2 0 0,
+                  Casillero 2 4 0 0,
+                  Casillero 4 6 0 0,
+                  Casillero 6 infinitoPositivo 1 100
+                ],
         ]
 
 testsHistograma :: Test
 testsHistograma =
   test
-    [ histograma 4 (1, 5) [1, 2, 3] ~?= agregar 3 (agregar 2 (agregar 1 (vacio 4 (1, 5)))),
-      completar
+    [ -- Caso del enunciado: los tres valores caen en casilleros dentro del rango
+      histograma 4 (1, 5) [1, 2, 3]
+        ~?= agregar 3 (agregar 2 (agregar 1 (vacio 4 (1, 5)))),
+
+      -- Lista vacía: todos los casilleros vacíos
+      histograma 3 (0, 6) []
+        ~?= vacio 3 (0, 6),
+
+      -- Valores fuera del rango: todos en -∞ o +∞
+      histograma 2 (0, 10) [-5, -1, 15, 20]
+        ~?= agregar 20 (agregar 15 (agregar (-1) (agregar (-5) (vacio 2 (0, 10))))),
+
+      -- Mezcla de valores dentro y fuera del rango
+      histograma 2 (0, 4) [-2, 0, 1.5, 3.9, 10]
+        ~?= agregar 10 (agregar 3.9 (agregar 1.5 (agregar 0 (agregar (-2) (vacio 2 (0, 4)))))),
+
     ]
+
 
 testsCasilleros :: Test
 testsCasilleros =
   test
-    [ casilleros (vacio 3 (0, 6))
+    [ -- Histograma vacío: todos los casilleros con 0
+      casilleros (vacio 3 (0, 6))
         ~?= [ Casillero infinitoNegativo 0.0 0 0.0,
               Casillero 0.0 2.0 0 0.0,
               Casillero 2.0 4.0 0 0.0,
               Casillero 4.0 6.0 0 0.0,
               Casillero 6.0 infinitoPositivo 0 0.0
             ],
+
+      -- Un valor en el casillero [2,4)
       casilleros (agregar 2 (vacio 3 (0, 6)))
         ~?= [ Casillero infinitoNegativo 0.0 0 0.0,
               Casillero 0.0 2.0 0 0.0,
@@ -122,20 +191,45 @@ testsCasilleros =
               Casillero 4.0 6.0 0 0.0,
               Casillero 6.0 infinitoPositivo 0 0.0
             ],
-      completar
+
+      -- Dos valores, repartidos en casilleros diferentes
+      casilleros (agregar 1 (agregar 5 (vacio 3 (0, 6))))
+        ~?= [ Casillero infinitoNegativo 0.0 0 0.0,
+              Casillero 0.0 2.0 1 50.0,
+              Casillero 2.0 4.0 0 0.0,
+              Casillero 4.0 6.0 1 50.0,
+              Casillero 6.0 infinitoPositivo 0 0.0
+            ],
+
+      -- Valores fuera del rango (uno a -∞ y otro a +∞)
+      casilleros (agregar (-1) (agregar 10 (vacio 3 (0, 6))))
+        ~?= [ Casillero infinitoNegativo 0.0 1 50.0,
+              Casillero 0.0 2.0 0 0.0,
+              Casillero 2.0 4.0 0 0.0,
+              Casillero 4.0 6.0 0 0.0,
+              Casillero 6.0 infinitoPositivo 1 50.0
+            ],
     ]
+
 
 testsRecr :: Test
 testsRecr =
-  test
-    [ completar
-    ]
+  let contarNodos = recrExpr (\_ rs -> 1 + sum rs)
+   in test
+        [ contarNodos (Const 5) ~?= 1,
+          contarNodos (Suma (Const 1) (Const 2)) ~?= 3,
+          contarNodos (Mult (Const 1) (Suma (Const 2) (Const 3))) ~?= 5
+        ]
 
 testsFold :: Test
 testsFold =
-  test
-    [ completar
-    ]
+  let sumarConsts = foldExpr id (\a b -> a + b)
+   in test
+        [ sumarConsts (Const 5) ~?= 5,
+          sumarConsts (Suma (Const 2) (Const 3)) ~?= 5,
+          sumarConsts (Mult (Suma (Const 1) (Const 2)) (Const 10)) ~?= 13
+        ]
+
 
 testsEval :: Test
 testsEval =
@@ -144,18 +238,30 @@ testsEval =
       fst (eval (Suma (Rango 1 5) (Const 1)) (genNormalConSemilla 0)) ~?= 3.7980492,
       -- el primer rango evalua a 2.7980492 y el segundo a 3.1250308
       fst (eval (Suma (Rango 1 5) (Rango 1 5)) (genNormalConSemilla 0)) ~?= 5.92308,
-      completar
+      fst (eval (Mult (Const 2) (Const 5)) genFijo) ~?= 10.0,
+      fst (eval (Div (Const 10) (Const 2)) genFijo) ~?= 5.0,
+      fst (eval (Resta (Const 10) (Const 3)) genFijo) ~?= 7.0
     ]
 
 testsArmarHistograma :: Test
 testsArmarHistograma =
-  test
-    [completar]
+  let h = fst (armarHistograma 2 4 (dameUno (10,10)) genFijo) -- siempre devuelve 10
+   in test
+        [ sum (map casCantidad (casilleros h)) ~?= 4, -- cuatro muestras
+          length (casilleros h) ~?= 4,                -- 2 finitos + extremos
+          maximum (map casCantidad (casilleros h)) ~?= 4, -- todo cae en el mismo casillero
+        ]
+
 
 testsEvalHistograma :: Test
 testsEvalHistograma =
-  test
-    [completar]
+  let h = fst (evalHistograma 3 6 (Const 2) genFijo)
+   in test
+        [ sum (map casCantidad (casilleros h)) ~?= 6, -- seis muestras
+          length (casilleros h) ~?= 5,                -- 3 finitos + extremos
+          all (>0) (map casCantidad (tail (init (casilleros h)))), -- algo cayó en los finitos
+        ]
+
 
 testsParse :: Test
 testsParse =
