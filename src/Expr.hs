@@ -66,27 +66,23 @@ foldExpr fConst fRango fSuma fResta fMult fDiv expresion =
 eval :: Expr -> G Float
 eval =
   foldExpr
-    (\const -> \g -> (const, g)) -- Evaluar constantes
-    (\a b -> \g -> dameUno (a, b) g) -- Evaluar nodos aleatorios
-    ( \recI recD -> \g ->              -- Suma
-        let (v1, g1) = recI g 
-            (v2, g2) = recD g1 
-         in (v1 + v2, g2) 
+    (\ const g -> (const, g)) -- Evaluar constantes
+    (\ a b g -> dameUno (a, b) g) -- Evaluar nodos aleatorios
+    ( \ recI recD g -> let (v1, g1) = recI g -- Suma
+                           (v2, g2) = recD g1
+                        in (v1 + v2, g2)
     )
-    ( \recI recD -> \g ->              -- Resta
-        let (v1, g1) = recI g
-            (v2, g2) = recD g1
-         in (v1 - v2, g2)
+    ( \ recI recD g -> let (v1, g1) = recI g -- Resta
+                           (v2, g2) = recD g1
+                        in (v1 - v2, g2)
     )
-    ( \recI recD -> \g ->              -- Multiplicación
-        let (v1, g1) = recI g
-            (v2, g2) = recD g1
-         in (v1 * v2, g2)
+    ( \ recI recD g -> let (v1, g1) = recI g -- Multiplicación
+                           (v2, g2) = recD g1
+                        in (v1 * v2, g2)
     )
-    ( \recI recD -> \g ->              -- División
-        let (v1, g1) = recI g
-            (v2, g2) = recD g1
-         in (v1 / v2, g2)
+    ( \ recI recD g -> let (v1, g1) = recI g -- División
+                           (v2, g2) = recD g1
+                        in (v1 / v2, g2)
     )
 
 -- | @armarHistograma m n f g@ arma un histograma con @m@ casilleros
@@ -116,29 +112,23 @@ evalHistograma m n expr = armarHistograma m n (eval expr) -- si pusiera \g -> ar
 mostrar :: Expr -> String
 mostrar =
   recrExpr
-    (\x -> show x)
+    show
     (\a b -> show a ++ "~" ++ show b)
-    ( \e1 rec1 e2 rec2 -> case constructor e2 of
-        CEConst -> maybeParen (not (constructor e1 == CEConst || constructor e1 == CESuma)) rec1 ++ " + " ++ rec2
-        _ -> rec1 ++ " + " ++ rec2
-    )
-    ( \e1 rec1 e2 rec2 ->
-        case constructor e1 of
-          CEResta ->
-            case constructor e2 of
-              CEResta -> "(" ++ rec1 ++ ") - (" ++ rec2 ++ ")"
-              _ -> "(" ++ rec1 ++ ") - " ++ rec2
-          _ ->
-            case constructor e2 of
-              CEResta -> rec1 ++ " - (" ++ rec2 ++ ")"
-              _ -> rec1 ++ " - " ++ rec2
-    )
-    ( \e1 rec1 e2 rec2 -> case constructor e2 of
-        CEConst -> maybeParen (not (constructor e1 == CEConst || constructor e1 == CEMult)) rec1 ++ " * " ++ rec2
-        CERango -> "(" ++ rec1 ++ " * " ++ rec2 ++ ")"
-        _ -> rec1 ++ " * " ++ rec2
-    )
-    (\e1 rec1 e2 rec2 -> maybeParen True rec1 ++ " / " ++ rec2)
+    (\e1 rec1 e2 rec2 -> maybeParen (not (esUnNumero e1 || constructor e1 == CESuma)) rec1 
+    ++ " + " 
+    ++ maybeParen (not (esUnNumero e2 || constructor e2 == CESuma)) rec2)
+    (\e1 rec1 e2 rec2 -> maybeParen (constructor e1 == CEResta) rec1 
+    ++ " - " 
+    ++ maybeParen (constructor e2 == CEResta) rec2)
+    (\e1 rec1 e2 rec2 -> maybeParen (not (esUnNumero e1 || constructor e1 == CEMult)) rec1 
+    ++ " * " 
+    ++ maybeParen (not (esUnNumero e2 || constructor e2 == CEMult )) rec2)
+    (\e1 rec1 e2 rec2 -> maybeParen (not (esUnNumero e1)) rec1 
+    ++ " / " 
+    ++ maybeParen (not (esUnNumero e2)) rec2)
+
+esUnNumero :: Expr -> Bool
+esUnNumero ex = constructor ex == CEConst || constructor ex == CERango
 
 data ConstructorExpr = CEConst | CERango | CESuma | CEResta | CEMult | CEDiv
   deriving (Show, Eq)

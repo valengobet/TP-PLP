@@ -231,32 +231,70 @@ testsFold =
 testsEval :: Test
 testsEval =
   test
-    [ fst (eval (Suma (Rango 1 5) (Const 1)) genFijo) ~?= 4.0,
+    [ 
       fst (eval (Suma (Rango 1 5) (Const 1)) (genNormalConSemilla 0)) ~?= 3.7980492,
-      -- el primer rango evalua a 2.7980492 y el segundo a 3.1250308
+      fst (eval (Suma (Const 4) (Const 1)) (genNormalConSemilla 0)) ~?= 5.0,
+      fst (eval (Suma (Rango 1 5) (Const 1)) genFijo) ~?= 4.0,
       fst (eval (Suma (Rango 1 5) (Rango 1 5)) (genNormalConSemilla 0)) ~?= 5.92308,
       fst (eval (Mult (Const 2) (Const 5)) genFijo) ~?= 10.0,
+      fst (eval (Mult (Rango 1 2) (Rango 1 5)) (genNormalConSemilla 0)) ~?= 4.5297704,
       fst (eval (Div (Const 10) (Const 2)) genFijo) ~?= 5.0,
-      fst (eval (Resta (Const 10) (Const 3)) genFijo) ~?= 7.0
+      fst (eval (Div (Rango 1 10) (Rango 1 2)) (genNormalConSemilla 0)) ~?= 3.2950761,
+      fst (eval (Resta (Const 10) (Const 3)) genFijo) ~?= 7.0,
+      fst (eval (Resta (Rango 1 10) (Rango 1 3)) (genNormalConSemilla 0)) ~?= 2.9830952,
+      fst (eval (Suma (Mult (Rango 1 2) (Rango 1 5)) (Resta (Rango 1 10) (Rango 1 3)))(genNormalConSemilla 0)) ~?= 13.310371
     ]
 
 testsArmarHistograma :: Test
 testsArmarHistograma =
-  let h = fst (armarHistograma 2 4 (dameUno (10, 10)) genFijo) -- siempre devuelve 10
-   in test
-        [ sum (map casCantidad (casilleros h)) ~?= 4, -- cuatro muestras
-          length (casilleros h) ~?= 4, -- 2 finitos + extremos
-          maximum (map casCantidad (casilleros h)) ~?= 4 -- todo cae en el mismo casillero
+  test
+        [ sum (map casCantidad c1) ~?= 4, -- cuatro muestras
+          length c1 ~?= 4, -- 2 finitos + extremos
+          maximum (map casCantidad c1) ~?= 4, -- todo cae en el mismo casillero
+          map casCantidad c1 ~?= [0,0,4,0], 
+          ---------------------------------------------------------------------------------------- Caso 2
+          sum (map casCantidad c2) ~?= 5, -- cinco muestras
+          length c2 ~?= 5, -- 2 finitos + extremos
+          maximum (map casCantidad c2) ~?= 3, -- el casillero con mayor casos es el del medio
+          map casCantidad c2 ~?= [0,1,3,1,0], -- todo cae dentro del rango
+          ---------------------------------------------------------------------------------------- Caso 3
+          sum (map casCantidad c3) ~?= 100, -- cien muestras
+          length c3 ~?= 5, -- 2 finitos + extremos
+          maximum (map casCantidad c3) ~?= 46,  -- el casillero con mayor casos es el del medio
+          map casCantidad  c3 ~?= [1,27,46,24,2] -- tenemos que caen fuera del rango
         ]
+  where
+    c1 = casilleros (fst (armarHistograma 2 4 (dameUno (10, 10)) genFijo))
+    c2 = casilleros (fst (armarHistograma 3 5 (dameUno (1, 10)) (genNormalConSemilla 0)))
+    c3 = casilleros (fst (armarHistograma 3 100 (dameUno (1, 100)) (genNormalConSemilla 0)))
+        
 
 testsEvalHistograma :: Test
 testsEvalHistograma =
-  let h = histograma 3 (3, 6) [3.1, 3.5, 4.9, 5.2, 3.8, 4.1]
-   in test
-        [ sum (map casCantidad (casilleros h)) ~?= 6, -- seis muestras
-          length (casilleros h) ~?= 5, -- 3 finitos + extremos
-          all ((> 0) . casCantidad) (tail (init (casilleros h))) ~?= True -- algo cayó en los finitos
+  test
+        [ sum (map casCantidad c1) ~?= 6, -- seis muestras
+          length c1 ~?= 5, -- 3 finitos + extremos
+          all ((> 0) . casCantidad) (tail (init c1)) ~?= True, -- algo cayó en los finitos
+          casCantidad (head c1) > 0 ~?= False, -- nada cayó en los -infinito
+          casCantidad (last c1) > 0 ~?= False, -- nada cayó en los +infinito  
+          ---------------------------------------------------------------------------------------- Caso 2
+          sum (map casCantidad c2) ~?= 5, -- cinco muestras
+          length c2 ~?= 5, -- 3 finitos + extremos
+          all ((> 0) . casCantidad) (tail (init c2)) ~?= False, -- nada cayó en los finitos
+          casCantidad (head c2) > 0 ~?= False, -- nada cayó en los -infinito
+          casCantidad (last c2) > 0 ~?= True, -- algo cayó en los +infinito  
+          ---------------------------------------------------------------------------------------- Caso 3
+          sum (map casCantidad c3) ~?= 100, -- cien muestras
+          length c3 ~?= 7, -- 5 finitos + extremos
+          all ((> 0) . casCantidad) (tail (init c3)) ~?= True, -- algo cayó en los finitos
+          casCantidad (head c3) > 0 ~?= True, -- algo cayó en los -infinito
+          casCantidad (last c3) > 0 ~?= True -- algo cayó en los +infinito
+
         ]
+  where
+    c1 = casilleros (histograma 3 (3, 6) [3.1, 3.5, 4.9, 5.2, 3.8, 4.1])
+    c2 = casilleros (histograma 3 (1, 10) [5.0456104,5.781319,11.044029,6.6854277,2.1621087])
+    c3 = casilleros (histograma 5 (1, 100) [45.501717,53.59451,111.48433,63.539703,13.7831955,64.872116,86.615265,86.44969,13.265369,10.532959,75.42795,27.453726,47.60898,68.85931,58.537766,24.811525,72.2526,50.3162,72.52614,22.280722,35.06108,63.61824,54.711525,55.383976,83.98961,65.36496,54.137203,70.30834,60.301933,63.22765,72.91609,22.67203,75.55327,32.6649,73.041176,46.792557,61.542305,26.72534,52.592934,90.36452,71.682274,35.293846,77.70097,21.917797,54.306896,93.21026,55.236195,94.413376,40.84056,72.50311,79.348206,62.428783,27.32771,56.08609,68.74971,81.5275,33.228027,51.265343,37.590656,24.146284,70.33746,59.489983,66.27703,23.797844,45.445568,-10.730633,49.82262,70.28327,49.720715,33.206406,59.64248,67.36187,27.97368,62.245274,23.614923,15.639008,41.43367,57.68116,85.21019,27.133512,55.427933,38.608833,45.2938,65.92268,43.467045,97.29263,95.24162,70.78,70.48694,63.09217,81.36019,29.611803,37.329765,87.872116,77.16374,15.447952,51.863373,10.897507,89.55332,102.77849])
 
 testsParse :: Test
 testsParse =
